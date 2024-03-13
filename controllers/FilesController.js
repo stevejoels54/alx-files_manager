@@ -29,6 +29,7 @@ class FilesController {
 
     // handle parentId validation
     if (parentId !== '0') {
+      if (!ObjectId.isValid(parentId)) return res.status(400).send({ error: 'Parent not found' });
       const parent = await fileUtils.getFile(parentId);
       if (!parent) return res.status(400).send({ error: 'Parent not found' });
       if (parent.type !== 'folder') return res.status(400).send({ error: 'Parent is not a folder' });

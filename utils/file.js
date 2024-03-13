@@ -1,9 +1,11 @@
+import { ObjectId } from 'mongodb';
 import dbClient from './db';
 
 class fileUtils {
   static async getFile(fileId) {
     try {
-      const file = await dbClient.files.findOne({ _id: fileId });
+      // const file = await dbClient.files.findOne({ _id: fileId });
+      const file = await dbClient.files.findOne({ _id: ObjectId(fileId) });
       return file;
     } catch (error) {
       throw new Error(`Error getting file: ${error.message}`);
