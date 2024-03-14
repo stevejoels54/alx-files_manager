@@ -156,6 +156,66 @@ class FilesController {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   }
+
+  static async putUnpublish(req, res) {
+    const fileId = req.params.id;
+    const token = req.header('X-Token');
+
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (!ObjectId.isValid(fileId)) return res.status(404).send({ error: 'Not found' });
+
+    const file = await fileUtils.getFile(fileId);
+    if (!file) return res.status(404).send({ error: 'Not found' });
+
+    const userId = await userUtils.getUserIdAndKey(token);
+    if (!userId) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (file.userId.toString() !== userId) return res.status(404).send({ error: 'Not found' });
+
+    try {
+      await dbClient.files.updateOne({ _id: ObjectId(fileId) }, { $set: { isPublic: false } });
+      return res.status(200).json({
+        ...file,
+        id: file._id,
+        _id: undefined,
+        localPath: undefined,
+        isPublic: false,
+      });
+    } catch (error) {
+      return res.status(500).send({ error: 'Error updating the file' });
+    }
+  }
+
+  static async putPublish(req, res) {
+    const fileId = req.params.id;
+    const token = req.header('X-Token');
+
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (!ObjectId.isValid(fileId)) return res.status(404).send({ error: 'Not found' });
+
+    const file = await fileUtils.getFile(fileId);
+    if (!file) return res.status(404).send({ error: 'Not found' });
+
+    const userId = await userUtils.getUserIdAndKey(token);
+    if (!userId) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (file.userId.toString() !== userId) return res.status(404).send({ error: 'Not found' });
+
+    try {
+      await dbClient.files.updateOne({ _id: ObjectId(fileId) }, { $set: { isPublic: true } });
+      return res.status(200).json({
+        ...file,
+        id: file._id,
+        _id: undefined,
+        localPath: undefined,
+        isPublic: true,
+      });
+    } catch (error) {
+      return res.status(500).send({ error: 'Error updating the file' });
+    }
+  }
 }
 
 export default FilesController;
