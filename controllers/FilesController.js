@@ -80,6 +80,82 @@ class FilesController {
       return res.status(500).send({ error: 'Error uploading the file' });
     }
   }
+
+  static async getShow(req, res) {
+    const fileId = req.params.id;
+    const token = req.header('X-Token');
+
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (!ObjectId.isValid(fileId)) return res.status(404).send({ error: 'Not found' });
+
+    const file = await fileUtils.getFile(fileId);
+    if (!file) return res.status(404).send({ error: 'Not found' });
+
+    if (file.isPublic) return res.status(200).json(file);
+
+    const userId = await userUtils.getUserIdAndKey(token);
+    if (!userId) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (file.userId.toString() !== userId) return res.status(404).send({ error: 'Not found' });
+
+    return res.status(200).json({
+      ...file,
+      id: file._id,
+      _id: undefined,
+      localPath: undefined,
+    });
+  }
+
+  static async getIndex(req, res) {
+    const token = req.header('X-Token');
+    // const { parentId = '0', page = 0 } = req.query;
+
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+
+    const userId = await userUtils.getUserIdAndKey(token);
+    if (!userId) return res.status(401).send({ error: 'Unauthorized' });
+
+    const user = await dbClient.users.findOne({ _id: ObjectId(userId) });
+    if (!user) return res.status(401).send({ error: 'Unauthorized' });
+
+    const parentId = req.query.parentId || '0';
+    const page = /^\d+$/.test(req.query.page) ? parseInt(req.query.page, 10) : 0;
+    const PAGE_SIZE = 20;
+    const skip = page * PAGE_SIZE;
+
+    try {
+      const filesFilter = {
+        userId: userId.toString(),
+        parentId: parentId === '0' ? parentId : new ObjectId(parentId),
+      };
+
+      const files = await dbClient.files.aggregate([
+        { $match: filesFilter },
+        { $sort: { _id: -1 } },
+        { $skip: skip },
+        { $limit: PAGE_SIZE },
+        {
+          $project: {
+            _id: 0,
+            id: '$_id',
+            userId: 1,
+            name: 1,
+            type: 1,
+            isPublic: 1,
+            parentId: {
+              $cond: { if: { $eq: ['$parentId', '0'] }, then: 0, else: '$parentId' },
+            },
+          },
+        },
+      ]).toArray();
+
+      return res.status(200).json(files);
+    } catch (error) {
+      console.error('Error retrieving files:', error);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
 }
 
 export default FilesController;

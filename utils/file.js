@@ -14,10 +14,26 @@ class fileUtils {
 
   static async getFilesOfParentId(parentId) {
     try {
-      const files = await dbClient.files.find({ parentId });
+      const files = await dbClient.files.aggregate(parentId);
       return files;
     } catch (error) {
       throw new Error(`Error getting files of parent ID ${parentId}: ${error.message}`);
+    }
+  }
+
+  static async getFilesByParentIdAndUserId(parentId, userId, page = 0) {
+    const PAGE_SIZE = 20;
+    const skip = page * PAGE_SIZE;
+
+    try {
+      const files = await this.files
+        .find({ parentId: parentId.toString(), userId: ObjectId(userId.toString()) })
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .toArray();
+      return files;
+    } catch (error) {
+      throw new Error(`Error getting files by parent ID and user ID: ${error.message}`);
     }
   }
 
