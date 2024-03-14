@@ -216,6 +216,35 @@ class FilesController {
       return res.status(500).send({ error: 'Error updating the file' });
     }
   }
+
+  static async getFile(req, res) {
+    const fileId = req.params.id;
+    const token = req.header('X-Token');
+
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (!ObjectId.isValid(fileId)) return res.status(404).send({ error: 'Not found' });
+
+    const file = await fileUtils.getFile(fileId);
+    if (!file) return res.status(404).send({ error: 'Not found' });
+
+    if (file.isPublic) return res.status(200).json(file);
+
+    const userId = await userUtils.getUserIdAndKey(token);
+    if (!userId) return res.status(401).send({ error: 'Unauthorized' });
+
+    if (file.userId.toString() !== userId) return res.status(404).send({ error: 'Not found' });
+
+    if (file.type === 'folder') return res.status(400).send({ error: 'A folder doesn\'t have content' });
+
+    try {
+      const fileContent = await fsPromises.readFile(file.localPath);
+      const fileData = fileContent.toString('base64');
+      return res.status(200).send(fileData);
+    } catch (error) {
+      return res.status(500).send({ error: 'Error retrieving the file' });
+    }
+  }
 }
 
 export default FilesController;
