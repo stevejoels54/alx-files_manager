@@ -45,7 +45,7 @@ class FilesController {
       userId: ObjectId(userId),
       name,
       type,
-      parentId: parentId === '0' ? parentId : ObjectId(parentId),
+      parentId: parentId === '0' ? 0 : ObjectId(parentId),
       isPublic,
     };
 
@@ -109,7 +109,6 @@ class FilesController {
 
   static async getIndex(req, res) {
     const token = req.header('X-Token');
-    // const { parentId = '0', page = 0 } = req.query;
 
     if (!token) return res.status(401).send({ error: 'Unauthorized' });
 
