@@ -129,6 +129,39 @@ class FilesController {
         parentId: parentId === '0' ? 0 : new ObjectId(parentId),
       };
 
+      if (!parentId && page === 0) {
+        return res.status(200).json([]);
+      }
+
+      // Check if no parentId is provided and page is greater than 0
+      if (!parentId && page > 0) {
+        return res.status(200).json([]);
+      }
+
+      // Route GET /files with a valid parentId and no page
+      if (page === 0) {
+        const files = await dbClient.files.aggregate([
+          { $match: filesFilter },
+          { $sort: { _id: -1 } },
+          { $limit: PAGE_SIZE },
+          {
+            $project: {
+              _id: 0,
+              id: '$_id',
+              userId: 1,
+              name: 1,
+              type: 1,
+              isPublic: 1,
+              parentId: {
+                $cond: { if: { $eq: ['$parentId', '0'] }, then: 0, else: '$parentId' },
+              },
+            },
+          },
+        ]).toArray();
+
+        return res.status(200).json(files);
+      }
+
       const files = await dbClient.files.aggregate([
         { $match: filesFilter },
         { $sort: { _id: -1 } },
