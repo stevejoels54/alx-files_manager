@@ -126,7 +126,7 @@ class FilesController {
     try {
       const filesFilter = {
         userId: userId.toString(),
-        parentId: parentId === '0' ? parentId : new ObjectId(parentId),
+        parentId: parentId === '0' ? 0 : new ObjectId(parentId),
       };
 
       const files = await dbClient.files.aggregate([
